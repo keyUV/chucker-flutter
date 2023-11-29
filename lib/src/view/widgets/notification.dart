@@ -142,7 +142,7 @@ class _NotificationState extends State<Notification>
                   PrimaryButton(
                     onPressed: () {
                       _controller.animateTo(0);
-                      ChuckerUiHelper.showChuckerScreen();
+                      // ChuckerUiHelper.showChuckerScreen();
                       _openDetails();
                     },
                     text: Localization.strings['details']!,
