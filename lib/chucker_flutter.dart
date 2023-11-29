@@ -7,3 +7,4 @@ export 'src/interceptors/chopper_interceptor.dart';
 export 'src/interceptors/dio_interceptor.dart';
 export 'src/interceptors/http_logging_interceptor.dart';
 export 'src/view/helper/chucker_ui_helper.dart' show ChuckerFlutter;
+export 'src/view/chucker_page.dart' show ChuckerPage;

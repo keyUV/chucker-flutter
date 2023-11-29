@@ -10,121 +10,117 @@ import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  const mockedSuccessResponse = {'id': 1};
+  const _mockedSuccessResponse = {'id': 1};
 
-  const baseUrl = 'https://www.example.com';
-  const successPath = '/success';
-  const failPath = '/fail';
-  const internalErrorPath = '/internal-error';
+  const _baseUrl = 'https://www.example.com';
+  const _successPath = '/success';
+  const _failPath = '/fail';
+  const _internalErrorPath = '/internal-error';
 
-  final mockClient = MockClient((request) async {
-    if (request.url.path == successPath) {
-      return Response(
-        jsonEncode(mockedSuccessResponse),
-        200,
-        request: request,
-      );
+  final _mockClient = MockClient((request) async {
+    if (request.url.path == _successPath) {
+      return Response(jsonEncode(_mockedSuccessResponse), 200);
     }
-    if (request.url.path == internalErrorPath) {
+    if (request.url.path == _internalErrorPath) {
       return Response(jsonEncode({'error': 'something went wrong'}), 500);
     }
     return Response(emptyString, 400);
   });
 
-  late final chopperClient = chopper.ChopperClient(
-    baseUrl: Uri.parse(baseUrl),
-    client: mockClient,
+  late final _chopperClient = chopper.ChopperClient(
+    baseUrl: _baseUrl,
+    client: _mockClient,
     interceptors: [
       ChuckerChopperInterceptor(),
     ],
   );
 
-  late final SharedPreferencesManager sharedPreferencesManager;
+  late final SharedPreferencesManager _sharedPreferencesManager;
 
   setUpAll(() {
-    sharedPreferencesManager = SharedPreferencesManager.getInstance(
-      initData: false,
-    );
+    _sharedPreferencesManager = SharedPreferencesManager.getInstance();
   });
   test('Response should be saved in shared preferences when call succeeds',
-      () async {
-    SharedPreferences.setMockInitialValues({});
-    await chopperClient.get<dynamic, dynamic>(Uri.parse(successPath));
+          () async {
+        SharedPreferences.setMockInitialValues({});
+        await _chopperClient.get(_successPath);
 
-    final responses = await sharedPreferencesManager.getAllApiResponses();
+        final responses = await _sharedPreferencesManager.getAllApiResponses();
 
-    expect(responses.length, 1);
-    expect(responses.first.statusCode, 200);
-    expect(responses.first.body, mockedSuccessResponse);
-  });
+        expect(responses.length, 1);
+        expect(responses.first.statusCode, 200);
+        expect(responses.first.body, {'data': _mockedSuccessResponse});
+      });
 
   test('Error should be saved in shared preferences when call fails', () async {
     SharedPreferences.setMockInitialValues({});
-    await chopperClient.get<dynamic, dynamic>(Uri.parse(failPath));
+    await _chopperClient.get(_failPath);
 
-    final responses = await sharedPreferencesManager.getAllApiResponses();
+    final responses = await _sharedPreferencesManager.getAllApiResponses();
 
     expect(responses.length, 1);
     expect(responses.first.statusCode, 400);
   });
 
-//   test(
-//       'When request has multipart body, its file details should be added'
-//       ' in api response model', () async {
-//     SharedPreferences.setMockInitialValues({});
-//     await _chopperClient.send(
-//       chopper.Request(
-//         'POST',
-//         _successPath,
-//         _baseUrl,
-//         parts: <chopper.PartValue>[
-//           const chopper.PartValue<String>('key', '123'),
-//           chopper.PartValueFile<MultipartFile>(
-//             'source',
-//             MultipartFile.fromString(
-//               'file',
-//               'file content',
-//               filename: 'a.png',
-//             ),
-//           )
-//         ],
-//         multipart: true,
-//       ),
-//     );
+  test(
+      'When request has multippart body, its file details should be added'
+          ' in api response model', () async {
+    SharedPreferences.setMockInitialValues({});
+    await _chopperClient.send(
+      chopper.Request(
+        'POST',
+        _successPath,
+        _baseUrl,
+        parts: <chopper.PartValue>[
+          const chopper.PartValue<String>('key', '123'),
+          chopper.PartValueFile<MultipartFile>(
+            'source',
+            MultipartFile.fromString(
+              'file',
+              'file content',
+              filename: 'a.png',
+            ),
+          )
+        ],
+        multipart: true,
+      ),
+    );
 
-//     const prettyJson = '''
-// {
-//      "request": [
-//           {
-//                "key": "123"
-//           },
-//           {
-//                "file": "a.png"
-//           }
-//      ]
-// }''';
+    const prettyJson = '''
+{
+     "request": [
+          {
+               "key": "123"
+          },
+          {
+               "file": "a.png"
+          }
+     ]
+}''';
 
-//     final responses = await _sharedPreferencesManager.getAllApiResponses();
+    final responses = await _sharedPreferencesManager.getAllApiResponses();
 
-//     expect(responses.first.prettyJsonRequest, prettyJson);
-//   });
+    expect(responses.first.prettyJsonRequest, prettyJson);
+  });
 
   test('When request has body, its json should be decoded to String', () async {
     SharedPreferences.setMockInitialValues({});
     final request = {
       'title': 'foo',
     };
-    await chopperClient.post<dynamic, dynamic>(
-      Uri.parse(successPath),
+    await _chopperClient.post(
+      _successPath,
       body: jsonEncode(request),
     );
 
     const prettyJson = '''
 {
-     "title": "foo"
+     "request": {
+          "title": "foo"
+     }
 }''';
 
-    final responses = await sharedPreferencesManager.getAllApiResponses();
+    final responses = await _sharedPreferencesManager.getAllApiResponses();
 
     expect(responses.first.prettyJsonRequest, prettyJson);
   });
