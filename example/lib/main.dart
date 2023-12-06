@@ -238,6 +238,7 @@ class _TodoPageState extends State<TodoPage> {
   void initState() {
     super.initState();
     _dio.interceptors.add(ChuckerDioInterceptor());
+    ChuckerFlutter.initShakeDetector(true);
   }
 
   @override

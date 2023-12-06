@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:chucker_flutter/src/helpers/extensions.dart';
+import 'package:chucker_flutter/src/helpers/shake_detector.dart';
 import 'package:chucker_flutter/src/helpers/shared_preferences_manager.dart';
 import 'package:chucker_flutter/src/localization/localization.dart';
 
@@ -6,6 +9,7 @@ import 'package:chucker_flutter/src/models/settings.dart';
 import 'package:chucker_flutter/src/view/chucker_page.dart';
 import 'package:chucker_flutter/src/view/helper/chucker_button.dart';
 import 'package:chucker_flutter/src/view/helper/colors.dart';
+import 'package:chucker_flutter/src/view/helper/notification_appbar.dart';
 import 'package:chucker_flutter/src/view/widgets/notification.dart'
     as notification;
 import 'package:flutter/foundation.dart';
@@ -18,21 +22,42 @@ import 'package:flutter/material.dart';
 ///of `chucker_flutter`
 class ChuckerUiHelper {
   static final List<OverlayEntry?> _overlayEntries = List.empty(growable: true);
+  static final NotificationBar notificationBar = NotificationBar();
 
   ///Only for testing
   static bool notificationShown = false;
+
+  static ShakeDetector? _shakeDetector;
+
+  /// Should inspector be opened on device shake (works only with physical
+  /// with sensors)
+  static Future<void> initShakeDetector(bool enabled) async {
+    if(enabled) {
+      if (Platform.isAndroid || Platform.isIOS) {
+        _shakeDetector = ShakeDetector.autoStart(
+          onPhoneShake: () {
+            showChuckerScreen();
+          },
+          shakeThresholdGravity: 4,
+        );
+      }
+    } else {
+      _shakeDetector?.stopListening();
+      _shakeDetector = null;
+    }
+  }
 
   ///[settings] to modify ui behaviour of chucker screens and notification
   static Settings settings = Settings.defaultObject();
 
   ///[showNotification] shows the rest api [method] (GET, POST, PUT, etc),
   ///[statusCode] (200, 400, etc) response status and [path]
-  static bool showNotification({
+  static Future<bool> showNotification({
     required String method,
     required int statusCode,
     required String path,
     required DateTime requestTime,
-  }) {
+  }) async {
     notificationShown = false;
 
     if (!ChuckerUiHelper.settings.showNotification) {
@@ -60,10 +85,14 @@ ChuckerFlutter: You programmatically vetoed notification behavior. Make sure to 
       return false;
     }
 
-    final overlay = ChuckerFlutter.navigatorObserver.navigator!.overlay;
-    final entry = _createOverlayEntry(method, statusCode, path, requestTime);
-    _overlayEntries.add(entry);
-    overlay?.insert(entry);
+    notificationBar.initializeNotificationsPlugin();
+    String message = "Status: $statusCode \nRequest Time: $requestTime";
+    await notificationBar.showLocalNotification(method,path,message, requestTime);
+
+    // final overlay = ChuckerFlutter.navigatorObserver.navigator!.overlay;
+    // final entry = _createOverlayEntry(method, statusCode, path, requestTime);
+    // _overlayEntries.add(entry);
+    // overlay?.insert(entry);
     notificationShown = true;
     return true;
   }
@@ -146,6 +175,11 @@ class ChuckerFlutter {
   ///[showNotification] decides whether to show in app notification or not
   ///By default its value is `true`
   static bool showNotification = true;
+
+  /// Should inspector be opened on device shake (works only with physical
+  /// with sensors)
+  static Future<void> initShakeDetector(bool enabled) =>
+      ChuckerUiHelper.initShakeDetector(enabled);
 
   ///[ChuckerButton] can be placed anywhere in the UI to open Chucker Screen
   static final chuckerButton = isDebugMode || ChuckerFlutter.showOnRelease
