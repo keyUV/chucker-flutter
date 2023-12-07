@@ -31,12 +31,16 @@ class ChuckerUiHelper {
 
   /// Should inspector be opened on device shake (works only with physical
   /// with sensors)
-  static Future<void> initShakeDetector(bool enabled) async {
+  static Future<void> initShakeDetector(bool enabled, {Function()? callback}) async {
     if(enabled) {
       if (Platform.isAndroid || Platform.isIOS) {
         _shakeDetector = ShakeDetector.autoStart(
           onPhoneShake: () {
-            showChuckerScreen();
+            if(callback !=null) {
+              callback.call();
+            }else{
+              showChuckerScreen();
+            }
           },
           shakeThresholdGravity: 4,
         );
@@ -178,8 +182,8 @@ class ChuckerFlutter {
 
   /// Should inspector be opened on device shake (works only with physical
   /// with sensors)
-  static Future<void> initShakeDetector(bool enabled) =>
-      ChuckerUiHelper.initShakeDetector(enabled);
+  static Future<void> initShakeDetector(bool enabled, {Function()? callback}) =>
+      ChuckerUiHelper.initShakeDetector(enabled, callback: callback);
 
   ///[ChuckerButton] can be placed anywhere in the UI to open Chucker Screen
   static final chuckerButton = isDebugMode || ChuckerFlutter.showOnRelease
